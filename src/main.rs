@@ -1,4 +1,4 @@
-use api_server::start;
+
 use axum::{
     routing::{get, post},
     Router,
@@ -6,15 +6,9 @@ use axum::{
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
 
-mod api;
-mod api_server;
-mod comfyui_client;
-mod config;
-mod prompt_constructor;
-mod static_drive_poller;
-mod workflow_manager;
-
-use crate::comfyui_client::ComfyUIClient;
+use comfyui_api_proxy::comfyui;
+use comfyui_api_proxy::api;
+use comfyui_api_proxy::config;
 
 #[tokio::main]
 async fn main() {
@@ -26,14 +20,14 @@ async fn main() {
     config::Config::dotenv_load();
     config::Config::print_env_vars();
     // Create ComfyUI client
-    let comfyui_client = comfyui_client::ComfyUIClient::new(config.comfyui_url.clone());
+    let comfyui_client = comfyui::client::ComfyUIClient::new(config.comfyui_url.clone());
 
     // Build our application with a route
     let app = Router::new()
         .route("/", get(|| async { "ComfyUI API Proxy" }))
-        .route("/queue_prompt", post(api::queue_prompt))
-        .route("/get_image", get(api::get_image))
-        .route("/get_history", get(api::get_history))
+        .route("/queue_prompt", post(api::routes::queue_prompt))
+        .route("/get_image", get(api::routes::get_image))
+        .route("/get_history", get(api::routes::get_history))
         .layer(CorsLayer::permissive())
         .with_state(comfyui_client);
 
@@ -45,8 +39,8 @@ async fn main() {
         .await
         .unwrap();
 
-    let comfyui_client = ComfyUIClient::new(config.comfyui_url.clone());
+    let comfyui_client = comfyui::client::ComfyUIClient::new(config.comfyui_url.clone());
 
-    start(config, comfyui_client).await
+    api::handlers::start(comfyui_client).await
 
 }
