@@ -2,10 +2,13 @@ use reqwest::Client;
 use serde_json::Value;
 use std::error::Error;
 
+
+#[derive(Clone)]
 pub struct ComfyUIClient {
     client: Client,
     base_url: String,
 }
+
 
 impl ComfyUIClient {
     pub fn new(base_url: String) -> Self {
@@ -15,15 +18,21 @@ impl ComfyUIClient {
         }
     }
 
-    pub async fn queue_prompt(&self, workflow: Value) -> Result<String, Box<dyn Error>> {
+    pub async fn queue_prompt(&self, prompt: Value) -> Result<Value, Box<dyn Error>> {
         let url = format!("{}/prompt", self.base_url);
-        let response = self.client.post(&url).json(&workflow).send().await?;
+        tracing::info!("Sending prompt to ComfyUI at URL: {}", url);
+        tracing::debug!("Prompt payload: {:?}", prompt);
+
+        let response = self.client.post(&url).json(&prompt).send().await?;
         
         if response.status().is_success() {
-            let json: Value = response.json().await?;
-            Ok(json["prompt_id"].as_str().unwrap_or("").to_string())
+            let json = response.json().await?;
+            tracing::info!("Successfully queued prompt. Response: {:?}", json);
+            Ok(json)
         } else {
-            Err(format!("Failed to queue prompt: {:?}", response.status()).into())
+            let error_message = format!("Failed to queue prompt: {:?}", response.status());
+            tracing::error!("{}", error_message);
+            Err(error_message.into())
         }
     }
 

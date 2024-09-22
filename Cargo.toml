@@ -12,3 +12,4 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dotenv = "0.15"
 reqwest = { version = "0.11", features = ["json"] }
+tower-http = { version = "0.4", features = ["cors"] }
